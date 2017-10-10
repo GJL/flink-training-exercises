@@ -27,7 +27,6 @@ import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.time.Time;
-import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.ParameterTool;
@@ -126,13 +125,16 @@ public class TravelTimePrediction {
 
 			// fetch operator state
 			TravelTimePredictionModel model = modelState.value();
+			if (model == null) {
+				model = new TravelTimePredictionModel();
+			}
 
 			TaxiRide ride = val.f1;
 			// compute distance and direction
 			double distance = GeoUtils.getEuclideanDistance(ride.startLon, ride.startLat, ride.endLon, ride.endLat);
 			int direction = GeoUtils.getDirectionAngle(ride.endLon, ride.endLat, ride.startLon, ride.startLat);
 
-			if(ride.isStart) {
+			if (ride.isStart) {
 				// we have a start event: Predict travel time
 				int predictedTime = model.predictTravelTime(direction, distance);
 				// emit prediction
@@ -156,9 +158,7 @@ public class TravelTimePrediction {
 							// state name
 							"regressionModel",
 							// type information of state
-							TypeInformation.of(new TypeHint<TravelTimePredictionModel>() {}),
-							// default value of state
-							new TravelTimePredictionModel());
+							TypeInformation.of(TravelTimePredictionModel.class));
 			modelState = getRuntimeContext().getState(descriptor);
 		}
 	}
